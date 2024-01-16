@@ -96,11 +96,10 @@ pub struct NixPackage {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Eq, Hash)]
-#[serde(default)]
 pub struct PackageLicense {
     #[serde(rename = "fullName")]
     pub full_name: String,
-    pub url: String,
+    pub url: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Eq, Hash)]
