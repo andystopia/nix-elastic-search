@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 
 // Response is the format for an ElasticSearch API response.
@@ -82,7 +80,7 @@ struct Hit {
     pub sort: (f64, String, String),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 /// a single package search result
 pub struct NixPackage {
     pub package_attr_name: String,
@@ -105,17 +103,17 @@ pub struct NixPackage {
     pub type_field: String,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Eq, Hash)]
 pub struct PackageLicense {
     #[serde(rename = "fullName")]
     pub full_name: String,
     pub url: String,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Eq, Hash)]
 pub struct PackageMaintainer {
     pub email: Option<String>,
     pub name: String,
-    #[serde(flatten)]
-    pub extras: HashMap<String, serde_json::Value>,
+    // #[serde(flatten)]
+    // pub extras: HashMap<String, serde_json::Value>,
 }

@@ -147,7 +147,7 @@ pub struct MatchSearch {
 
 impl MatchSearch {
     pub fn to_json(&self) -> serde_json::Value {
-        let multi_match_name = format!("multi_match_{}", self.search.replace(" ", "_"));
+        let multi_match_name = format!("multi_match_{}", self.search.replace(' ', "_"));
         let initial_query = json!({
                 "multi_match": {
                     "type":  "cross_fields",
@@ -174,7 +174,7 @@ impl MatchSearch {
         });
 
         let queries = std::iter::once(initial_query)
-            .chain(self.search.split(" ").map(|split| {
+            .chain(self.search.split(' ').map(|split| {
                 json!( {
                         "wildcard": {
                             "package_attr_name": {
@@ -187,12 +187,12 @@ impl MatchSearch {
             }))
             .collect::<Vec<_>>();
 
-        return json!({
+        json!({
             "dis_max":  {
                 "tie_breaker": 0.7,
                 "queries": queries,
             }
-        });
+        })
     }
 }
 
