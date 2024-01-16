@@ -16,12 +16,6 @@ pub enum SearchWithin {
     Flakes,
 }
 
-#[derive(Debug, Clone)]
-/// a collection of nix packages that results from a search
-pub struct NixPackageCollection {
-    pub packages: Vec<NixPackage>,
-}
-
 #[derive(Debug, Error)]
 /// the possible errors that can happen in this library
 pub enum NixSearchError {
@@ -75,7 +69,7 @@ impl Query {
     }
 
     /// Search nix packages for your query
-    pub fn send(&self) -> Result<NixPackageCollection, NixSearchError> {
+    pub fn send(&self) -> Result<Vec<NixPackage>, NixSearchError> {
         let res = ureq::post(
             self.get_url()
                 // we could handle this, but really I think it's such a pain
@@ -101,7 +95,7 @@ impl Query {
             response::SearchResponse::Error { error, status } => {
                 Err(NixSearchError::ElasticSearchError { error, status })
             }
-            response::SearchResponse::Success { packages } => Ok(NixPackageCollection { packages }),
+            response::SearchResponse::Success { packages } => Ok(packages),
         }
     }
     fn payload(&self) -> serde_json::Value {
