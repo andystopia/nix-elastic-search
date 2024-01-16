@@ -18,29 +18,20 @@ pub(crate) enum SearchResponse {
 
 impl From<InnerSearchResponse> for SearchResponse {
     fn from(value: InnerSearchResponse) -> Self {
-        match value {
-            InnerSearchResponse::Error { error, status } => Self::Error { error, status },
-            InnerSearchResponse::Success { hits } => Self::Success {
-                packages: hits
-                    .hits
-                    .into_iter()
-                    .map(|hit| hit.source)
-                    .collect::<Vec<_>>(),
+        match value.error.zip(value.status) {
+            Some((error, status)) => SearchResponse::Error { error, status },
+            None => SearchResponse::Success {
+                packages: value.hits.hits.into_iter().map(|h| h.source).collect(),
             },
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
-enum InnerSearchResponse {
-    Error {
-        error: ElasticSearchResponseError,
-        status: i64,
-    },
-    Success {
-        hits: Hits,
-    },
+struct InnerSearchResponse {
+    error: Option<ElasticSearchResponseError>,
+    status: Option<i64>,
+    hits: Hits,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -76,6 +67,7 @@ struct Hit {
     pub source: NixPackage,
     #[serde(rename = "_type")]
     pub type_field: String,
+    #[serde(default)]
     pub matched_queries: Vec<String>,
     pub sort: (f64, String, String),
 }
