@@ -32,10 +32,49 @@
 ///
 /// assert!(query.send().is_ok());
 /// ```
+/// 
+/// ```rust
+/// use nix_elastic_search::{Query, SearchWithin, MatchName};
+///
+/// let query = Query {
+///     max_results: 10,
+///     search_within: SearchWithin::Channel("23.11".to_owned()),
+///     search: None,
+///     program: None,
+///     name: Some(MatchName { name: "rust".to_owned() }),
+///     version: None,
+///     query_string: None,
+/// };
+/// 
+/// query.send().unwrap();
+/// ```
 
 
+#[derive(Debug)]
+pub struct SerdeNixPackagePath { 
+    text: String
+}
 
+impl SerdeNixPackagePath {
+    pub fn new(text: String) -> Self {
+        Self { text }
+    }
 
+    pub fn get_error_path(&self) -> String { 
+        
+        
+        let jd = &mut serde_json::Deserializer::from_str(&self.text);
+        let result: Result<response::SearchResponse, _> = serde_path_to_error::deserialize(jd);
+
+        match result {
+            Ok(_) => "<no path found>".to_owned(),
+            Err(err) => {
+                err.path().to_string()
+            }
+        }
+
+    }
+}
 pub mod response;
 
 use base64::prelude::*;
@@ -59,9 +98,9 @@ pub enum NixSearchError {
         #[from]
         source: ureq::Error,
     },
-    #[error("serde_json (used to parse json) encounted an unexpected error: {source}")]
+    #[error("serde_json (used to parse json) encounted an unexpected error: {source}, at path: {}", path.get_error_path())]
     DeserializationError {
-        #[from]
+        path: SerdeNixPackagePath,
         source: serde_json::Error,
     },
     #[error("the elastic search endpoint had a server error")]
@@ -72,22 +111,7 @@ pub enum NixSearchError {
 }
 
 /// **USE THIS**: This is where you define what parameterizes your search
-/// 
-/// ```rust
-/// use nix_elastic_search::{Query, SearchWithin, MatchName};
-///
-/// let query = Query {
-///     max_results: 10,
-///     search_within: SearchWithin::Channel("23.11".to_owned()),
-///     search: None,
-///     program: None,
-///     name: Some(MatchName { name: "gleam".to_owned() }),
-///     version: None,
-///     query_string: None,
-/// };
-///
-/// query.send().unwrap();
-/// ```
+/// note: multiple filters are allowed.
 
 pub struct Query {
     pub max_results: u32,
@@ -139,12 +163,17 @@ impl Query {
         .set("Accept", "application/json")
         .send_string(&self.payload().to_string())?;
 
-        dbg!(res.status());
-
         let text = res.into_string().unwrap();
 
-        eprintln!("{}", text);
-        let read = serde_json::from_str::<response::SearchResponse>(&text)?;
+        let read = match serde_json::from_str::<response::SearchResponse>(&text) {
+            Ok(r) => r,
+            Err(err) => {
+                return Err(NixSearchError::DeserializationError {
+                    path: SerdeNixPackagePath::new(text),
+                    source: err,
+                })
+            }
+        };
 
         match read {
             response::SearchResponse::Error { error, status } => {

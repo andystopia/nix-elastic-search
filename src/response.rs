@@ -59,26 +59,26 @@ struct Hits {
 struct Hit {
     #[serde(rename = "_id")]
     pub id: String,
-    #[serde(rename = "_index")]
-    pub index: String,
-    #[serde(rename = "_score")]
-    pub score: f64,
+    // #[serde(rename = "_index")]
+    // pub index: String,
+    // #[serde(rename = "_score")]
+    // pub score: f64,
     #[serde(rename = "_source")]
     pub source: NixPackage,
-    #[serde(rename = "_type")]
-    pub type_field: String,
-    #[serde(default)]
-    pub matched_queries: Vec<String>,
-    pub sort: (f64, String, String),
+    // #[serde(rename = "_type")]
+    // pub type_field: String,
+    // #[serde(default)]
+    // pub matched_queries: Vec<String>,
+    // pub sort: (f64, String, String),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-/// a single package search result
+#[derive(Default, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+
 pub struct NixPackage {
     pub package_attr_name: String,
-    pub package_attr_set: String,
-    pub package_default_output: String,
-    pub package_description: String,
+    pub package_attr_set: Option<String>,
+    pub package_default_output: Option<String>,
+    pub package_description: Option<String>,
     pub package_homepage: Vec<String>,
     pub package_license: Vec<PackageLicense>,
     pub package_license_set: Vec<String>,
@@ -87,15 +87,16 @@ pub struct NixPackage {
     pub package_outputs: Vec<String>,
     pub package_platforms: Vec<String>,
     pub package_pname: String,
-    pub package_position: String,
+    pub package_position: Option<String>,
     pub package_programs: Vec<String>,
     pub package_pversion: String,
-    pub package_system: String,
+    pub package_system: Option<String>,
     #[serde(rename = "type")]
     pub type_field: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Eq, Hash)]
+#[serde(default)]
 pub struct PackageLicense {
     #[serde(rename = "fullName")]
     pub full_name: String,
@@ -103,9 +104,10 @@ pub struct PackageLicense {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Eq, Hash)]
+#[serde(default)]
 pub struct PackageMaintainer {
     pub email: Option<String>,
-    pub name: String,
+    pub name: Option<String>,
     // #[serde(flatten)]
     // pub extras: HashMap<String, serde_json::Value>,
 }
