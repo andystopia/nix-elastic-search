@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(from = "InnerSearchResponse")]
-pub enum SearchResponse {
+pub(crate) enum SearchResponse {
     Error {
         error: ElasticSearchResponseError,
         status: i64,
@@ -83,6 +83,7 @@ struct Hit {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// a single package search result
 pub struct NixPackage {
     pub package_attr_name: String,
     pub package_attr_set: String,

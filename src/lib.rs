@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![doc = include_str!("../README.md")]
 
-mod response;
+pub mod response;
 
 use base64::prelude::*;
 use response::{ElasticSearchResponseError, NixPackage};
