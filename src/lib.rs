@@ -32,7 +32,7 @@
 ///
 /// assert!(query.send().is_ok());
 /// ```
-/// 
+///
 /// ```rust
 /// use nix_elastic_search::{Query, SearchWithin, MatchName};
 ///
@@ -45,14 +45,13 @@
 ///     version: None,
 ///     query_string: None,
 /// };
-/// 
+///
 /// query.send().unwrap();
 /// ```
 
-
 #[derive(Debug)]
-pub struct SerdeNixPackagePath { 
-    text: String
+pub struct SerdeNixPackagePath {
+    text: String,
 }
 
 impl SerdeNixPackagePath {
@@ -60,19 +59,14 @@ impl SerdeNixPackagePath {
         Self { text }
     }
 
-    pub fn get_error_path(&self) -> String { 
-        
-        
+    pub fn get_error_path(&self) -> String {
         let jd = &mut serde_json::Deserializer::from_str(&self.text);
         let result: Result<response::SearchResponse, _> = serde_path_to_error::deserialize(jd);
 
         match result {
             Ok(_) => "<no path found>".to_owned(),
-            Err(err) => {
-                err.path().to_string()
-            }
+            Err(err) => err.path().to_string(),
         }
-
     }
 }
 pub mod response;
@@ -135,13 +129,13 @@ impl Query {
     fn get_url(&self) -> Result<Url, url::ParseError> {
         match &self.search_within {
             SearchWithin::Channel(channel) => {
-                Self::prefix().join(&format!("{}nixos-{channel}", Self::ELASTIC_PREFIX))?
+                Self::prefix().join(&format!("/{}nixos-{channel}/", Self::ELASTIC_PREFIX))?
             }
             SearchWithin::Flakes => {
-                Self::prefix().join(&format!("{}group-manual", Self::ELASTIC_PREFIX))?
+                Self::prefix().join(&format!("{}group-manual/", Self::ELASTIC_PREFIX))?
             }
         }
-        .join("/_search")
+        .join("_search")
     }
 
     /// Search nix packages for your query
@@ -373,5 +367,76 @@ impl MatchQueryString {
                 "query": self.query_string,
             }
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_search() {
+        let query = Query {
+            max_results: 20,
+            search_within: SearchWithin::Channel("23.11".to_owned()),
+
+            search: None,
+            program: None,
+            name: Some(MatchName {
+                name: "cargo".to_owned(),
+            }),
+            version: None,
+            query_string: None,
+        };
+
+        let results = query.send().unwrap();
+
+        let res = results
+            .into_iter()
+            .map(|p| {
+                format!(
+                    "{}: {}",
+                    p.package_attr_name,
+                    p.package_description.unwrap_or_default()
+                )
+            })
+            .collect::<Vec<_>>();
+
+        println!("{:?}", res);
+    }
+
+    #[test]
+    fn test_search_name() {
+        let query = Query {
+            max_results: 10,
+            search_within: SearchWithin::Channel("23.11".to_owned()),
+            search: None,
+            program: None,
+            name: Some(MatchName {
+                name: "rust".to_owned(),
+            }),
+            version: None,
+            query_string: None,
+        };
+
+        query.send().unwrap();
+    }
+
+    #[test]
+    fn test_url() {
+        let query = Query {
+            max_results: 10,
+            search_within: SearchWithin::Channel("23.11".to_owned()),
+            search: None,
+            program: None,
+            name: Some(MatchName {
+                name: "rust".to_owned(),
+            }),
+            version: None,
+            query_string: None,
+        };
+
+        let url = query.get_url().unwrap();
+        eprintln!("{}", url);
     }
 }
