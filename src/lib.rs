@@ -11,43 +11,48 @@
 //! so I can depend on it directly. I think the work they did is amazing.
 //!
 //!
+//! As of 2024-01-17, I now include a web scraper for versions which is my original work,
+//! but wouldn't be possible without: <https://lazamar.co.uk/nix-versions>. I simply
+//! have a naive web scraper which scrapes this website.
+//!
+//! Note you can turn off the web scraper if you don't need version search by setting default
+//! features to [], and then including the other features you still want.
 //! ## Usage
 //!
-
-/// ```rust
-/// use nix_elastic_search::{Query, SearchWithin, MatchSearch};
-///
-/// let query = Query {
-///     max_results: 10,
-///     search_within: SearchWithin::Channel("23.11".to_owned()),
-///
-///     search: Some(MatchSearch {
-///         search: "gleam".to_owned(),
-///     }),
-///     program: None,
-///     name: None,
-///     version: None,
-///     query_string: None,
-/// };
-///
-/// assert!(query.send().is_ok());
-/// ```
-///
-/// ```rust
-/// use nix_elastic_search::{Query, SearchWithin, MatchName};
-///
-/// let query = Query {
-///     max_results: 10,
-///     search_within: SearchWithin::Channel("23.11".to_owned()),
-///     search: None,
-///     program: None,
-///     name: Some(MatchName { name: "rust".to_owned() }),
-///     version: None,
-///     query_string: None,
-/// };
-///
-/// query.send().unwrap();
-/// ```
+//! ```rust
+//! use nix_elastic_search::{Query, SearchWithin, MatchSearch};
+//!
+//! let query = Query {
+//!     max_results: 10,
+//!     search_within: SearchWithin::Channel("23.11".to_owned()),
+//!
+//!     search: Some(MatchSearch {
+//!         search: "gleam".to_owned(),
+//!     }),
+//!     program: None,
+//!     name: None,
+//!     version: None,
+//!     query_string: None,
+//! };
+//!
+//! assert!(query.send().is_ok());
+//! ```
+//!
+//! ```rust
+//! use nix_elastic_search::{Query, SearchWithin, MatchName};
+//!
+//! let query = Query {
+//!     max_results: 10,
+//!     search_within: SearchWithin::Channel("23.11".to_owned()),
+//!     search: None,
+//!     program: None,
+//!     name: Some(MatchName { name: "rust".to_owned() }),
+//!     version: None,
+//!     query_string: None,
+//! };
+//!
+//! query.send().unwrap();
+//! ```
 
 #[derive(Debug)]
 pub struct SerdeNixPackagePath {
@@ -69,10 +74,19 @@ impl SerdeNixPackagePath {
         }
     }
 }
-pub mod response;
+mod response;
+
+pub use response::{
+    ElasticSearchResponseError, ElasticSearchResponseErrorResource, ErrorResource, NixPackage,
+    PackageLicense, PackageMaintainer,
+};
+
+#[cfg(feature = "version-search")]
+pub(crate) mod version;
+#[cfg(feature = "version-search")]
+pub use version::{lookup_package_versions, PackageVersion};
 
 use base64::prelude::*;
-use response::{ElasticSearchResponseError, NixPackage};
 use serde_json::json;
 use thiserror::Error;
 use url::Url;
@@ -102,9 +116,26 @@ pub enum NixSearchError {
         error: ElasticSearchResponseError,
         status: i64,
     },
+
+    #[error("invalid package name error. failed to create url for: {package_name}")]
+    InvalidPackageNameError {
+        package_name: String,
+        #[source]
+        source: url::ParseError,
+    },
+
+    #[error("The older versions are scraped from a website, but for some unknown reason the table was not found. That's all we know.")]
+    MissingTableForVersions,
+
+    #[error("Error reading returned response body for veresion search to string")]
+    ErrorReadingVersionBody {
+        package_name: String,
+        #[source]
+        source: std::io::Error,
+    },
 }
 
-/// **USE THIS**: This is where you define what parameterizes your search
+/// **USE THIS**: This is where you define what parameterizes your search  
 /// note: multiple filters are allowed.
 
 pub struct Query {

@@ -13,3 +13,9 @@ thiserror = "1.0.56"
 ureq = "2.9.1"
 url = "2.5.0"
 serde_path_to_error = "0.1.15"
+
+scraper = {version = "0.18.1", optional = true}
+
+[features]
+version-search = ["dep:scraper"]
+default = ["version-search"]

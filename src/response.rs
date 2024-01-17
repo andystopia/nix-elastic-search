@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::NixSearchError;
+
 // Response is the format for an ElasticSearch API response.
 // If the request was successful, only `Hits` will be populated.
 // if the request failed, `Error` and `Status` will both be set, and `Hits` will be empty.pub struct Response {
@@ -72,8 +74,11 @@ struct Hit {
     // pub sort: (f64, String, String),
 }
 
+/// The primary thing that describes a Nix Package.
+///
+/// Constructed from succesful queries of the nix search elastic
+/// search api, allows for reading of package attributes.
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-
 pub struct NixPackage {
     pub package_attr_name: String,
     pub package_attr_set: Option<String>,
@@ -93,6 +98,20 @@ pub struct NixPackage {
     pub package_system: Option<String>,
     #[serde(rename = "type")]
     pub type_field: String,
+}
+
+#[cfg(feature = "version-search")]
+impl NixPackage {
+    /// WARNING: THIS CALLS A WEB SCRAPER. USE RESPONSIBLY.
+    /// IF your'e doing a lot of searching, you should not
+    /// be querying this method eagerly. It's going to be slow,
+    /// and as far as I can tell, this person hosts this
+    /// site out of the goodness of their heart for the Nix
+    /// community to enjoy. Please have friction to using
+    /// this method in your applications.
+    pub fn all_versions(&self) -> Result<Vec<crate::PackageVersion>, NixSearchError> {
+        crate::version::lookup_package_versions(&self.package_pname)
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Eq, Hash)]
